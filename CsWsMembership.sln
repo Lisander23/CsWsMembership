@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.36105.23 d17.13
+VisualStudioVersion = 17.13.36105.23
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LoyaltyApi", "LoyaltyApi\LoyaltyApi.csproj", "{B525C4CA-220D-453D-AC75-5EE8B7AFB9D9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoyaltyApi.Tests", "LoyaltyApi.Tests\LoyaltyApi.Tests.csproj", "{EEB48017-20C3-4CD1-97F3-D8E7032A3650}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LoyaltyApi.IntegrationTests", "LoyaltyApi.IntegrationTests\LoyaltyApi.IntegrationTests.csproj", "{67182978-A09D-4CAB-9EE8-D2439A92182E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{EEB48017-20C3-4CD1-97F3-D8E7032A3650}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EEB48017-20C3-4CD1-97F3-D8E7032A3650}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EEB48017-20C3-4CD1-97F3-D8E7032A3650}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67182978-A09D-4CAB-9EE8-D2439A92182E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67182978-A09D-4CAB-9EE8-D2439A92182E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67182978-A09D-4CAB-9EE8-D2439A92182E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67182978-A09D-4CAB-9EE8-D2439A92182E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
