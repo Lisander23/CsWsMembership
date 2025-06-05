@@ -5,10 +5,6 @@ using LoyaltyApi.Controllers;
 using LoyaltyApi.Data;
 using LoyaltyApi.Models;
 using LoyaltyApi.Entities;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
-using System;
 
 public class CustomerMembershipsControllerTests
 {
