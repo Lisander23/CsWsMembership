@@ -23,9 +23,9 @@ public class CustomerMembershipsControllerTests
     {
         // Arrange
         var context = GetInMemoryDbContext();
-        context.CustomerMemberships.Add(new CustomerMembership { Id = 1, CodCliente = 100, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddYears(1), Estado = "Activo", IdSuscripcionMP = "sub1", IdClienteMP = "client1", MesesAcumulacionPersonalizado = 12 });
-        context.CustomerMemberships.Add(new CustomerMembership { Id = 2, CodCliente = 101, PlanId = 2, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddYears(1), Estado = "Activo", IdSuscripcionMP = "sub2", IdClienteMP = "client2", MesesAcumulacionPersonalizado = null });
-        context.CustomerMemberships.Add(new CustomerMembership { Id = 3, CodCliente = 102, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(6), Estado = "Inactivo", IdSuscripcionMP = "sub3", IdClienteMP = "client3", MesesAcumulacionPersonalizado = 6 });
+        context.CustomerMemberships.Add(new CustomerMembership { Id = 1, CodCliente = 100, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddYears(1), Estado = "ACTIVO", IdSuscripcionMP = "sub1", IdClienteMP = "client1", MesesAcumulacionPersonalizado = 12 });
+        context.CustomerMemberships.Add(new CustomerMembership { Id = 2, CodCliente = 101, PlanId = 2, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddYears(1), Estado = "ACTIVO", IdSuscripcionMP = "sub2", IdClienteMP = "client2", MesesAcumulacionPersonalizado = null });
+        context.CustomerMemberships.Add(new CustomerMembership { Id = 3, CodCliente = 102, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(6), Estado = "INACTIVO", IdSuscripcionMP = "sub3", IdClienteMP = "client3", MesesAcumulacionPersonalizado = 6 });
         await context.SaveChangesAsync();
         var controller = new CustomerMembershipsController(context);
 
@@ -33,7 +33,7 @@ public class CustomerMembershipsControllerTests
         var result = await controller.GetMemberships();
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var okResult = Assert.IsType<OkObjectResult>(result.ExecuteResultAsync);
         var memberships = Assert.IsAssignableFrom<IEnumerable<CustomerMembershipDto>>(okResult.Value);
 
         Assert.Equal(2, memberships.Count());
@@ -45,7 +45,7 @@ public class CustomerMembershipsControllerTests
         Assert.NotNull(firstMembership);
         Assert.Equal(100, firstMembership.CodCliente);
         Assert.Equal(1, firstMembership.PlanId);
-        Assert.Equal("Activo", firstMembership.Estado);
+        Assert.Equal("ACTIVO", firstMembership.Estado);
         Assert.Equal("sub1", firstMembership.IdSuscripcionMP);
         Assert.Equal("client1", firstMembership.IdClienteMP);
         Assert.Equal(12, firstMembership.MesesAcumulacionPersonalizado);
@@ -66,7 +66,7 @@ public class CustomerMembershipsControllerTests
         var result = await controller.GetMemberships();
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var okResult = Assert.IsType<OkObjectResult>(result.ExecuteResultAsync);
         var memberships = Assert.IsAssignableFrom<IEnumerable<CustomerMembershipDto>>(okResult.Value);
         Assert.Empty(memberships);
 
@@ -80,8 +80,8 @@ public class CustomerMembershipsControllerTests
     {
         // Arrange
         var context = GetInMemoryDbContext();
-        var activeMembership = new CustomerMembership { Id = 1, CodCliente = 100, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddYears(1), Estado = "Activo" };
-        var inactiveMembership = new CustomerMembership { Id = 2, CodCliente = 101, PlanId = 2, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddYears(1), Estado = "Inactivo" };
+        var activeMembership = new CustomerMembership { Id = 1, CodCliente = 100, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddYears(1), Estado = "ACTIVO" };
+        var inactiveMembership = new CustomerMembership { Id = 2, CodCliente = 101, PlanId = 2, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddYears(1), Estado = "INACTIVO" };
         context.CustomerMemberships.AddRange(activeMembership, inactiveMembership);
         await context.SaveChangesAsync();
         var controller = new CustomerMembershipsController(context);
@@ -91,12 +91,12 @@ public class CustomerMembershipsControllerTests
         var result = await controller.GetMembership(expectedId);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var okResult = Assert.IsType<OkObjectResult>(result.ExecuteResultAsync);
         var returnedMembership = Assert.IsType<CustomerMembershipDto>(okResult.Value);
 
         Assert.Equal(expectedId, returnedMembership.Id);
         Assert.Equal(activeMembership.CodCliente, returnedMembership.CodCliente);
-        Assert.Equal("Activo", returnedMembership.Estado);
+        Assert.Equal("ACTIVO", returnedMembership.Estado);
 
         context.Dispose();
     }
@@ -116,7 +116,7 @@ public class CustomerMembershipsControllerTests
         var result = await controller.GetMembership(nonExistentId);
 
         // Assert
-        Assert.IsType<NotFoundObjectResult>(result.Result);
+        Assert.IsType<NotFoundObjectResult>(result.ExecuteResultAsync);
         context.Dispose();
     }
 
@@ -127,7 +127,7 @@ public class CustomerMembershipsControllerTests
     {
         // Arrange
         var context = GetInMemoryDbContext();
-        var inactiveMembership = new CustomerMembership { Id = 3, CodCliente = 102, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(6), Estado = "Inactivo" };
+        var inactiveMembership = new CustomerMembership { Id = 3, CodCliente = 102, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(6), Estado = "INACTIVO" };
         context.CustomerMemberships.Add(inactiveMembership);
         await context.SaveChangesAsync();
         var controller = new CustomerMembershipsController(context);
@@ -137,7 +137,7 @@ public class CustomerMembershipsControllerTests
         var result = await controller.GetMembership(inactiveId);
 
         // Assert
-        Assert.IsType<NotFoundObjectResult>(result.Result);
+        Assert.IsType<NotFoundObjectResult>(result.ExecuteResultAsync);
         context.Dispose();
     }
 
@@ -400,7 +400,7 @@ public class CustomerMembershipsControllerTests
         var result = await controller.CreateMembership(dto);
 
         // Assert
-        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var created = Assert.IsType<CreatedAtActionResult>(result.ExecuteResultAsync);
         var membership = Assert.IsType<CustomerMembershipDto>(created.Value);
         Assert.Equal(1, membership.CodCliente);
         Assert.Equal(1, membership.PlanId);
@@ -417,7 +417,7 @@ public class CustomerMembershipsControllerTests
         var context = GetInMemoryDbContext();
         var cliente = new Cliente { CodCliente = 1, NomCliente = "Test" };
         var plan = new MembershipPlan { Id = 1, Nombre = "Plan", PrecioMensual = 10, EntradasMensuales = 2, Nivel = 1, Activo = true };
-        var membership = new CustomerMembership { Id = 1, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "Activo" };
+        var membership = new CustomerMembership { Id = 1, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "ACTIVO" };
         context.Clientes.Add(cliente);
         context.MembershipPlans.Add(plan);
         context.CustomerMemberships.Add(membership);
@@ -448,7 +448,7 @@ public class CustomerMembershipsControllerTests
     {
         // Arrange
         var context = GetInMemoryDbContext();
-        var membership = new CustomerMembership { Id = 1, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "Activo" };
+        var membership = new CustomerMembership { Id = 1, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "ACTIVO" };
         context.CustomerMemberships.Add(membership);
         await context.SaveChangesAsync();
 
@@ -486,7 +486,7 @@ public class CustomerMembershipsControllerTests
         var result = await controller.CreateMembership(dto);
 
         // Assert
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.ExecuteResultAsync);
         Assert.Equal("El cliente especificado no existe.", badRequest.Value);
         context.Dispose();
     }
@@ -515,7 +515,7 @@ public class CustomerMembershipsControllerTests
         var result = await controller.CreateMembership(dto);
 
         // Assert
-        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.ExecuteResultAsync);
         Assert.Equal("El plan especificado no existe.", badRequest.Value);
         context.Dispose();
     }
@@ -529,7 +529,7 @@ public class CustomerMembershipsControllerTests
         var context = GetInMemoryDbContext();
         var cliente = new Cliente { CodCliente = 1, NomCliente = "Test" };
         var plan = new MembershipPlan { Id = 1, Nombre = "Plan", PrecioMensual = 10, EntradasMensuales = 2, Nivel = 1, Activo = true };
-        var membership = new CustomerMembership { CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "Activo" };
+        var membership = new CustomerMembership { CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "ACTIVO" };
         context.Clientes.Add(cliente);
         context.MembershipPlans.Add(plan);
         context.CustomerMemberships.Add(membership);
@@ -548,7 +548,7 @@ public class CustomerMembershipsControllerTests
         var result = await controller.CreateMembership(dto);
 
         // Assert
-        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
+        var conflict = Assert.IsType<ConflictObjectResult>(result.ExecuteResultAsync);
         Assert.Equal("Ya existe una membresía activa para este cliente y plan.", conflict.Value);
         context.Dispose();
     }
@@ -586,7 +586,7 @@ public class CustomerMembershipsControllerTests
         // Arrange
         var context = GetInMemoryDbContext();
         var plan = new MembershipPlan { Id = 1, Nombre = "Plan", PrecioMensual = 10, EntradasMensuales = 2, Nivel = 1, Activo = true };
-        var membership = new CustomerMembership { Id = 1, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "Activo" };
+        var membership = new CustomerMembership { Id = 1, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "ACTIVO" };
         context.MembershipPlans.Add(plan);
         context.CustomerMemberships.Add(membership);
         await context.SaveChangesAsync();
@@ -617,7 +617,7 @@ public class CustomerMembershipsControllerTests
         // Arrange
         var context = GetInMemoryDbContext();
         var cliente = new Cliente { CodCliente = 1, NomCliente = "Test" };
-        var membership = new CustomerMembership { Id = 1, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "Activo" };
+        var membership = new CustomerMembership { Id = 1, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "ACTIVO" };
         context.Clientes.Add(cliente);
         context.CustomerMemberships.Add(membership);
         await context.SaveChangesAsync();
@@ -650,8 +650,8 @@ public class CustomerMembershipsControllerTests
         var context = GetInMemoryDbContext();
         var cliente = new Cliente { CodCliente = 1, NomCliente = "Test" };
         var plan = new MembershipPlan { Id = 1, Nombre = "Plan", PrecioMensual = 10, EntradasMensuales = 2, Nivel = 1, Activo = true };
-        var membership1 = new CustomerMembership { Id = 1, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "Activo" };
-        var membership2 = new CustomerMembership { Id = 2, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(2), Estado = "Activo" };
+        var membership1 = new CustomerMembership { Id = 1, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(1), Estado = "ACTIVO" };
+        var membership2 = new CustomerMembership { Id = 2, CodCliente = 1, PlanId = 1, FechaInicio = DateTime.Now, FechaFin = DateTime.Now.AddMonths(2), Estado = "ACTIVO" };
         context.Clientes.Add(cliente);
         context.MembershipPlans.Add(plan);
         context.CustomerMemberships.AddRange(membership1, membership2);

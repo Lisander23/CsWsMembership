@@ -123,7 +123,7 @@ namespace LoyaltyApi.Tests
                     CodCliente = 1,
                     PlanId = 1,
                     FechaInicio = DateTime.Now,
-                    Estado = "Activo"
+                    Estado = "ACTIVO"
                 });
                 context.SaveChanges();
             }
@@ -229,7 +229,7 @@ namespace LoyaltyApi.Tests
                     CodCliente = 2,
                     PlanId = 2,
                     FechaInicio = DateTime.Now,
-                    Estado = "Activo"
+                    Estado = "ACTIVO"
                 });
                 context.SaveChanges();
             }
