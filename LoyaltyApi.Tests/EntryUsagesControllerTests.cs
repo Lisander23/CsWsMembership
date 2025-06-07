@@ -8,6 +8,7 @@ using LoyaltyApi.Controllers;
 using LoyaltyApi.Entities;
 using LoyaltyApi.Data;
 using System.Linq;
+using LoyaltyApi.Models;
 
 namespace LoyaltyApi.Tests
 {
@@ -81,7 +82,7 @@ namespace LoyaltyApi.Tests
             using (var context = new LoyaltyContext(options))
             {
                 var controller = new EntryUsagesController(context);
-                var dto = new EntryUsagesController.EntryUsageDto
+                var dto = new EntryUsageDto
                 {
                     FechaUso = DateTime.UtcNow,
                     CodComplejo = 2,
@@ -113,7 +114,7 @@ namespace LoyaltyApi.Tests
             var options = GetInMemoryOptions();
             using var context = new LoyaltyContext(options);
             var controller = new EntryUsagesController(context);
-            var dto = new EntryUsagesController.EntryUsageDto
+            var dto = new EntryUsageDto
             {
                 FechaUso = DateTime.UtcNow,
                 CodComplejo = 3,
