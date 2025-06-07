@@ -50,7 +50,7 @@ namespace LoyaltyApi.Tests
                 var result = await controller.GetBenefits();
 
                 // Assert
-                var okResult = Assert.IsType<OkObjectResult>(result.Result);
+                var okResult = Assert.IsType<OkObjectResult>(result.ExecuteResultAsync);
                 var benefits = Assert.IsAssignableFrom<IEnumerable<object>>(okResult.Value);
                 Assert.Single(benefits);
             }
@@ -86,7 +86,7 @@ namespace LoyaltyApi.Tests
                 var result = await controller.GetBenefit(2);
 
                 // Assert
-                var okResult = Assert.IsType<OkObjectResult>(result.Result);
+                var okResult = Assert.IsType<OkObjectResult>(result.ExecuteResultAsync);
                 Assert.NotNull(okResult.Value);
             }
         }
@@ -106,7 +106,7 @@ namespace LoyaltyApi.Tests
             var result = await controller.GetBenefit(999);
 
             // Assert
-            Assert.IsType<NotFoundObjectResult>(result.Result);
+            Assert.IsType<NotFoundObjectResult>(result.ExecuteResultAsync);
         }
 
         /// <summary>
@@ -149,7 +149,7 @@ namespace LoyaltyApi.Tests
                 var result = await controller.CreateBenefit(dto);
 
                 // Assert
-                var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+                var createdResult = Assert.IsType<CreatedAtActionResult>(result.ExecuteResultAsync);
                 Assert.NotNull(createdResult.Value);
             }
         }
@@ -177,7 +177,7 @@ namespace LoyaltyApi.Tests
             var result = await controller.CreateBenefit(dto);
 
             // Assert
-            Assert.IsType<BadRequestObjectResult>(result.Result);
+            Assert.IsType<BadRequestObjectResult>(result.ExecuteResultAsync);
         }
 
         /// <summary>
