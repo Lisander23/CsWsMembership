@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.16" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.9.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LoyaltyApi\LoyaltyApi.csproj" />
+  </ItemGroup>
+
+  <!-- Este bloque copia el .deps.json automáticamente -->
+  <Target Name="CopyDepsFile" AfterTargets="Build">
+    <PropertyGroup>
+      <_DepsSource>$(SolutionDir)LoyaltyApi\bin\$(Configuration)\net8.0\LoyaltyApi.deps.json</_DepsSource>
+      <_DepsTarget>$(OutputPath)testhost.deps.json</_DepsTarget>
+    </PropertyGroup>
+    <Copy SourceFiles="$(_DepsSource)"
+          DestinationFiles="$(_DepsTarget)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_DepsSource)')" />
+  </Target>
+
+
+</Project>
