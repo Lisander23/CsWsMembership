@@ -77,6 +77,7 @@ namespace LoyaltyApi.Tests
             using (var context = new LoyaltyContext(options))
             {
                 var controller = new CustomerMembershipsController(context);
+
                 var result = await controller.GetMemberships();
 
                 var okResult = Assert.IsType<OkObjectResult>(result);
@@ -117,6 +118,7 @@ namespace LoyaltyApi.Tests
             using (var context = new LoyaltyContext(options))
             {
                 var controller = new CustomerMembershipsController(context);
+
                 var result = await controller.GetMemberships();
 
                 var okResult = Assert.IsType<OkObjectResult>(result);
@@ -198,7 +200,7 @@ namespace LoyaltyApi.Tests
                 Assert.Equal("client1", membership.IdClienteMP);
                 Assert.Equal(12, membership.MesesAcumulacionPersonalizado);
                 Assert.True(Math.Abs((fechaInicio - membership.FechaInicio).TotalSeconds) < 1);
-                Assert.True(Math.Abs((fechaFin - membership.FechaFin.Value).TotalSeconds) < 1);
+                Assert.True(Math.Abs((fechaFin - membership.FechaFin).TotalSeconds) < 1);
             }
         }
 
@@ -310,6 +312,7 @@ namespace LoyaltyApi.Tests
                         Periodo = periodoActual,
                         EntradasUsadas = entradasUsadas
                     };
+
                     ctx.MembershipPlans.Add(plan);
                     ctx.CustomerMemberships.Add(membership);
                     ctx.EntryBalances.Add(entryBalance);
@@ -487,7 +490,13 @@ namespace LoyaltyApi.Tests
                         FechaFin = fechaFin,
                         Estado = "ACTIVO"
                     };
-                    ctx.EntryBalances.Add(new EntryBalance { Id = 2, CustomerMembershipId = membership.Id, Periodo = periodoActual - 1, EntradasUsadas = 5 });
+                    ctx.EntryBalances.Add(new EntryBalance
+                    {
+                        Id = 2,
+                        CustomerMembershipId = membership.Id,
+                        Periodo = periodoActual - 1,
+                        EntradasUsadas = 5
+                    });
                     ctx.MembershipPlans.Add(plan);
                     ctx.CustomerMemberships.Add(membership);
                 });
@@ -558,7 +567,13 @@ namespace LoyaltyApi.Tests
                         FechaInicio = fechaInicio,
                         FechaFin = fechaFin
                     };
-                    var entryBalance = new EntryBalance { CustomerMembershipId = 1, Periodo = periodoActual, EntradasUsadas = entradasUsadas };
+                    var entryBalance = new EntryBalance
+                    {
+                        CustomerMembershipId = 1,
+                        Periodo = periodoActual,
+                        EntradasUsadas = entradasUsadas
+                    };
+
                     ctx.MembershipPlans.Add(plan);
                     ctx.CustomerMemberships.Add(customerMembership);
                     ctx.EntryBalances.Add(entryBalance);
@@ -568,6 +583,7 @@ namespace LoyaltyApi.Tests
             using (var context = new LoyaltyContext(options))
             {
                 var controller = new CustomerMembershipsController(context);
+
                 var result = await controller.GetCustomerMembershipStatus(codClienteStr);
 
                 var okResult = Assert.IsType<OkObjectResult>(result);
@@ -593,7 +609,653 @@ namespace LoyaltyApi.Tests
         }
 
         [Fact]
-        public async Task DeleteMembership_ReturnsNoContent_WhenMembershipIsActive()
+        public async Task CreateMembership_ReturnsCreated_WhenValid()
+        {
+            var options = GetInMemoryOptions();
+            var fechaInicio = DateTime.UtcNow;
+            var fechaFin = DateTime.UtcNow.AddMonths(1);
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.Clientes.Add(new Cliente { CodCliente = 1, NomCliente = "Test" });
+                    ctx.MembershipPlans.Add(new MembershipPlan
+                    {
+                        Id = 1,
+                        Nombre = "Plan",
+                        PrecioMensual = 10,
+                        EntradasMensuales = 2,
+                        Nivel = 1,
+                        Activo = true
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 1,
+                    FechaInicio = fechaInicio,
+                    FechaFin = fechaFin,
+                    IdSuscripcionMP = "sub1",
+                    IdClienteMP = "client1",
+                    MesesAcumulacionPersonalizado = 12
+                };
+
+                var result = await controller.CreateMembership(dto);
+
+                var createdResult = Assert.IsType<CreatedAtActionResult>(result);
+                Assert.Equal(201, createdResult.StatusCode);
+
+                var response = createdResult.Value;
+                var dataProperty = response.GetType().GetProperty("data");
+                var timestampProperty = response.GetType().GetProperty("timestamp");
+                Assert.NotNull(dataProperty);
+                Assert.NotNull(timestampProperty);
+
+                var membership = Assert.IsType<CustomerMembershipDto>(dataProperty.GetValue(response));
+                Assert.Equal(1, membership.CodCliente);
+                Assert.Equal(1, membership.PlanId);
+                Assert.Equal("ACTIVO", membership.Estado);
+                Assert.Equal("sub1", membership.IdSuscripcionMP);
+                Assert.Equal("client1", membership.IdClienteMP);
+                Assert.Equal(12, membership.MesesAcumulacionPersonalizado);
+                Assert.True(Math.Abs((fechaInicio - membership.FechaInicio!.Value).TotalSeconds) < 1);
+                Assert.True(Math.Abs((fechaFin - membership.FechaFin!.Value).TotalSeconds) < 1);
+
+                var dbMembership = await context.CustomerMemberships.FindAsync(membership.Id);
+                Assert.NotNull(dbMembership);
+                Assert.Equal(1, dbMembership.CodCliente);
+                Assert.Equal(1, dbMembership.PlanId);
+                Assert.Equal("ACTIVO", dbMembership.Estado);
+                Assert.Equal("sub1", dbMembership.IdSuscripcionMP);
+                Assert.Equal("client1", dbMembership.IdClienteMP);
+                Assert.Equal(12, dbMembership.MesesAcumulacionPersonalizado);
+            }
+        }
+
+        [Fact]
+        public async Task CreateMembership_ReturnsBadRequest_WhenClienteDoesNotExist()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.MembershipPlans.Add(new MembershipPlan
+                    {
+                        Id = 1,
+                        Nombre = "Plan",
+                        PrecioMensual = 10,
+                        EntradasMensuales = 2,
+                        Nivel = 1,
+                        Activo = true
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 99,
+                    PlanId = 1,
+                    FechaInicio = DateTime.UtcNow,
+                    FechaFin = DateTime.UtcNow.AddMonths(1)
+                };
+
+                var result = await controller.CreateMembership(dto);
+
+                var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+                Assert.Equal(400, badRequestResult.StatusCode);
+
+                var response = badRequestResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("El cliente especificado no existe.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task CreateMembership_ReturnsBadRequest_WhenPlanDoesNotExist()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.Clientes.Add(new Cliente { CodCliente = 1, NomCliente = "Test" });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 99,
+                    FechaInicio = DateTime.UtcNow,
+                    FechaFin = DateTime.UtcNow.AddMonths(1)
+                };
+
+                var result = await controller.CreateMembership(dto);
+
+                var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+                Assert.Equal(400, badRequestResult.StatusCode);
+
+                var response = badRequestResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("El plan especificado no existe.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task CreateMembership_ReturnsBadRequest_WhenPlanIsInactive()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.Clientes.Add(new Cliente { CodCliente = 1, NomCliente = "Test" });
+                    ctx.MembershipPlans.Add(new MembershipPlan
+                    {
+                        Id = 1,
+                        Nombre = "Plan",
+                        PrecioMensual = 10,
+                        EntradasMensuales = 2,
+                        Nivel = 1,
+                        Activo = false
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 1,
+                    FechaInicio = DateTime.UtcNow,
+                    FechaFin = DateTime.UtcNow.AddMonths(1)
+                };
+
+                var result = await controller.CreateMembership(dto);
+
+                var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+                Assert.Equal(400, badRequestResult.StatusCode);
+
+                var response = badRequestResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("El plan especificado está inactivo.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task CreateMembership_ReturnsBadRequest_WhenFechaInicioAfterFechaFin()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.Clientes.Add(new Cliente { CodCliente = 1, NomCliente = "Test" });
+                    ctx.MembershipPlans.Add(new MembershipPlan
+                    {
+                        Id = 1,
+                        Nombre = "Plan",
+                        PrecioMensual = 10,
+                        EntradasMensuales = 2,
+                        Nivel = 1,
+                        Activo = true
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 1,
+                    FechaInicio = DateTime.UtcNow.AddMonths(1),
+                    FechaFin = DateTime.UtcNow
+                };
+
+                var result = await controller.CreateMembership(dto);
+
+                var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+                Assert.Equal(400, badRequestResult.StatusCode);
+
+                var response = badRequestResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("La fecha de inicio debe ser anterior a la fecha de fin.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task CreateMembership_ReturnsConflict_WhenActiveMembershipExists()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.Clientes.Add(new Cliente { CodCliente = 1, NomCliente = "Test" });
+                    ctx.MembershipPlans.Add(new MembershipPlan
+                    {
+                        Id = 1,
+                        Nombre = "Plan",
+                        PrecioMensual = 10,
+                        EntradasMensuales = 2,
+                        Nivel = 1,
+                        Activo = true
+                    });
+                    ctx.CustomerMemberships.Add(new CustomerMembership
+                    {
+                        CodCliente = 1,
+                        PlanId = 1,
+                        FechaInicio = DateTime.UtcNow,
+                        FechaFin = DateTime.UtcNow.AddMonths(1),
+                        Estado = "ACTIVO"
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 1,
+                    FechaInicio = DateTime.UtcNow,
+                    FechaFin = DateTime.UtcNow.AddMonths(1)
+                };
+
+                var result = await controller.CreateMembership(dto);
+
+                var conflictResult = Assert.IsType<ConflictObjectResult>(result);
+                Assert.Equal(409, conflictResult.StatusCode);
+
+                var response = conflictResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("Ya existe una membresía activa para este cliente y plan.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task UpdateMembership_ReturnsNoContent_WhenValid()
+        {
+            var options = GetInMemoryOptions();
+            var fechaInicioOriginal = DateTime.UtcNow;
+            var fechaFinOriginal = DateTime.UtcNow.AddMonths(1);
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.Clientes.Add(new Cliente { CodCliente = 1, NomCliente = "Test" });
+                    ctx.MembershipPlans.Add(new MembershipPlan
+                    {
+                        Id = 1,
+                        Nombre = "Plan",
+                        PrecioMensual = 10,
+                        EntradasMensuales = 2,
+                        Nivel = 1,
+                        Activo = true
+                    });
+                    ctx.CustomerMemberships.Add(new CustomerMembership
+                    {
+                        Id = 1,
+                        CodCliente = 1,
+                        PlanId = 1,
+                        FechaInicio = fechaInicioOriginal,
+                        FechaFin = fechaFinOriginal,
+                        Estado = "ACTIVO",
+                        IdSuscripcionMP = "sub1",
+                        IdClienteMP = "client1",
+                        MesesAcumulacionPersonalizado = 12
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var fechaInicioNueva = DateTime.UtcNow.AddDays(1);
+                var fechaFinNueva = DateTime.UtcNow.AddMonths(2);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 1,
+                    FechaInicio = fechaInicioNueva,
+                    FechaFin = fechaFinNueva,
+                    IdSuscripcionMP = "sub2",
+                    IdClienteMP = "client2",
+                    MesesAcumulacionPersonalizado = 6
+                };
+
+                var result = await controller.UpdateMembership(1, dto);
+
+                var noContentResult = Assert.IsType<NoContentResult>(result);
+                Assert.Equal(204, noContentResult.StatusCode);
+
+                var membership = await context.CustomerMemberships.FindAsync(1);
+                Assert.Equal(1, membership.CodCliente);
+                Assert.Equal(1, membership.PlanId);
+                Assert.Equal("ACTIVO", membership.Estado);
+                Assert.Equal("sub2", membership.IdSuscripcionMP);
+                Assert.Equal("client2", membership.IdClienteMP);
+                Assert.Equal(6, membership.MesesAcumulacionPersonalizado);
+                Assert.True(Math.Abs((fechaInicioNueva - membership.FechaInicio).TotalSeconds) < 1);
+                Assert.True(Math.Abs((fechaFinNueva - membership.FechaFin).TotalSeconds) < 1);
+            }
+        }
+
+        [Fact]
+        public async Task UpdateMembership_ReturnsNotFound_WhenMembershipDoesNotExist()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 1,
+                    FechaInicio = DateTime.UtcNow,
+                    FechaFin = DateTime.UtcNow.AddMonths(1)
+                };
+
+                var result = await controller.UpdateMembership(99, dto);
+
+                var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+                Assert.Equal(404, notFoundResult.StatusCode);
+
+                var response = notFoundResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("Membresía no encontrada o inactiva.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task UpdateMembership_ReturnsBadRequest_WhenClienteDoesNotExist()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.MembershipPlans.Add(new MembershipPlan
+                    {
+                        Id = 1,
+                        Nombre = "Plan",
+                        PrecioMensual = 10,
+                        EntradasMensuales = 2,
+                        Nivel = 1,
+                        Activo = true
+                    });
+                    ctx.CustomerMemberships.Add(new CustomerMembership
+                    {
+                        Id = 1,
+                        CodCliente = 1,
+                        PlanId = 1,
+                        FechaInicio = DateTime.UtcNow,
+                        FechaFin = DateTime.UtcNow.AddMonths(1),
+                        Estado = "ACTIVO"
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 99,
+                    PlanId = 1,
+                    FechaInicio = DateTime.UtcNow,
+                    FechaFin = DateTime.UtcNow.AddMonths(1)
+                };
+
+                var result = await controller.UpdateMembership(1, dto);
+
+                var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+                Assert.Equal(400, badRequestResult.StatusCode);
+
+                var response = badRequestResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("El cliente especificado no existe.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task UpdateMembership_ReturnsBadRequest_WhenPlanDoesNotExist()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.Clientes.Add(new Cliente { CodCliente = 1, NomCliente = "Test" });
+                    ctx.CustomerMemberships.Add(new CustomerMembership
+                    {
+                        Id = 1,
+                        CodCliente = 1,
+                        PlanId = 1,
+                        FechaInicio = DateTime.UtcNow,
+                        FechaFin = DateTime.UtcNow.AddMonths(1),
+                        Estado = "ACTIVO"
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 99,
+                    FechaInicio = DateTime.UtcNow,
+                    FechaFin = DateTime.UtcNow.AddMonths(1)
+                };
+
+                var result = await controller.UpdateMembership(1, dto);
+
+                var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+                Assert.Equal(400, badRequestResult.StatusCode);
+
+                var response = badRequestResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("El plan especificado no existe.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task UpdateMembership_ReturnsBadRequest_WhenPlanIsInactive()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.Clientes.Add(new Cliente { CodCliente = 1, NomCliente = "Test" });
+                    ctx.MembershipPlans.Add(new MembershipPlan
+                    {
+                        Id = 1,
+                        Nombre = "Plan",
+                        PrecioMensual = 10,
+                        EntradasMensuales = 2,
+                        Nivel = 1,
+                        Activo = false
+                    });
+                    ctx.CustomerMemberships.Add(new CustomerMembership
+                    {
+                        Id = 1,
+                        CodCliente = 1,
+                        PlanId = 1,
+                        FechaInicio = DateTime.UtcNow,
+                        FechaFin = DateTime.UtcNow.AddMonths(1),
+                        Estado = "ACTIVO"
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 1,
+                    FechaInicio = DateTime.UtcNow,
+                    FechaFin = DateTime.UtcNow.AddMonths(1)
+                };
+
+                var result = await controller.UpdateMembership(1, dto);
+
+                var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+                Assert.Equal(400, badRequestResult.StatusCode);
+
+                var response = badRequestResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("El plan especificado está inactivo.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task UpdateMembership_ReturnsBadRequest_WhenFechaInicioAfterFechaFin()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.Clientes.Add(new Cliente { CodCliente = 1, NomCliente = "Test" });
+                    ctx.MembershipPlans.Add(new MembershipPlan
+                    {
+                        Id = 1,
+                        Nombre = "Plan",
+                        PrecioMensual = 10,
+                        EntradasMensuales = 2,
+                        Nivel = 1,
+                        Activo = true
+                    });
+                    ctx.CustomerMemberships.Add(new CustomerMembership
+                    {
+                        Id = 1,
+                        CodCliente = 1,
+                        PlanId = 1,
+                        FechaInicio = DateTime.UtcNow,
+                        FechaFin = DateTime.UtcNow.AddMonths(1),
+                        Estado = "ACTIVO"
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 1,
+                    FechaInicio = DateTime.UtcNow.AddMonths(1),
+                    FechaFin = DateTime.UtcNow
+                };
+
+                var result = await controller.UpdateMembership(1, dto);
+
+                var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+                Assert.Equal(400, badRequestResult.StatusCode);
+
+                var response = badRequestResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("La fecha de inicio debe ser anterior a la fecha de fin.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task UpdateMembership_ReturnsConflict_WhenOtherActiveMembershipExists()
+        {
+            var options = GetInMemoryOptions();
+            using (var context = new LoyaltyContext(options))
+            {
+                SetupContext(context, ctx =>
+                {
+                    ctx.Clientes.Add(new Cliente { CodCliente = 1, NomCliente = "Test" });
+                    ctx.MembershipPlans.Add(new MembershipPlan
+                    {
+                        Id = 1,
+                        Nombre = "Plan",
+                        PrecioMensual = 10,
+                        EntradasMensuales = 2,
+                        Nivel = 1,
+                        Activo = true
+                    });
+                    ctx.CustomerMemberships.Add(new CustomerMembership
+                    {
+                        Id = 1,
+                        CodCliente = 1,
+                        PlanId = 1,
+                        FechaInicio = DateTime.UtcNow,
+                        FechaFin = DateTime.UtcNow.AddMonths(1),
+                        Estado = "ACTIVO"
+                    });
+                    ctx.CustomerMemberships.Add(new CustomerMembership
+                    {
+                        Id = 2,
+                        CodCliente = 1,
+                        PlanId = 1,
+                        FechaInicio = DateTime.UtcNow,
+                        FechaFin = DateTime.UtcNow.AddMonths(2),
+                        Estado = "ACTIVO"
+                    });
+                });
+            }
+
+            using (var context = new LoyaltyContext(options))
+            {
+                var controller = new CustomerMembershipsController(context);
+                var dto = new CreateCustomerMembershipDto
+                {
+                    CodCliente = 1,
+                    PlanId = 1,
+                    FechaInicio = DateTime.UtcNow,
+                    FechaFin = DateTime.UtcNow.AddMonths(3)
+                };
+
+                var result = await controller.UpdateMembership(1, dto);
+
+                var conflictResult = Assert.IsType<ConflictObjectResult>(result);
+                Assert.Equal(409, conflictResult.StatusCode);
+
+                var response = conflictResult.Value;
+                var errorProperty = response.GetType().GetProperty("error");
+                Assert.NotNull(errorProperty);
+                Assert.Equal("Ya existe otra membresía activa para este cliente y plan.", errorProperty.GetValue(response));
+            }
+        }
+
+        [Fact]
+        public async Task DeleteMembership_ReturnsNoContent_WhenValid()
         {
             var options = GetInMemoryOptions();
             using (var context = new LoyaltyContext(options))
@@ -618,13 +1280,10 @@ namespace LoyaltyApi.Tests
 
                 var result = await controller.DeleteMembership(1);
 
-                Assert.IsType<NoContentResult>(result);
-            }
+                var noContentResult = Assert.IsType<NoContentResult>(result);
+                Assert.Equal(204, noContentResult.StatusCode);
 
-            using (var context = new LoyaltyContext(options))
-            {
                 var membership = await context.CustomerMemberships.FindAsync(1);
-                Assert.NotNull(membership);
                 Assert.Equal("INACTIVO", membership.Estado);
             }
         }
